@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Moisture Dashboard (Firebase)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .data-value {
+            font-size: 3.5rem; /* Large font for data */
+            line-height: 1;
+        }
+        @media (max-width: 640px) {
+            .data-value {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <header class="mb-8 p-6 bg-white shadow-xl rounded-xl border-t-4 border-indigo-500">
+            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">SDI-12 Soil Sensor Monitoring</h1>
+            <p class="mt-2 text-lg text-gray-500">Live data fetched from **Firebase Firestore** in real-time.</p>
+        </header>
+
+        <!-- Loading/Status Indicator -->
+        <div id="loading" class="text-center p-6 bg-blue-100 rounded-xl shadow-md text-blue-700 font-semibold transition-all duration-300">
+            Connecting to Firebase...
+        </div>
+        
+        <div id="auth-info" class="text-center mt-4 text-sm text-gray-600">
+            User ID: <span id="user-id-display" class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Awaiting Auth...</span>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 opacity-0 transition-opacity duration-500">
+            
+            <!-- Soil Resistance Card -->
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-indigo-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Soil Resistance (Raw)</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H7l5 5L7 15h10l-5 5"></path>
+                    </svg>
+                </div>
+                <div class="mt-6">
+                    <span id="resistance-value" class="data-value font-mono font-extrabold text-indigo-600">--</span>
+                    <span class="text-2xl font-semibold text-gray-500 ml-2">Ohms</span>
+                </div>
+                <p id="resistance-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">--</span></p>
+            </div>
+
+            <!-- Centibar (Water Potential) Card -->
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-green-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Water Potential (Centibar)</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <path d="M9 12l2 2 4-4"></path>
+                    </svg>
+                </div>
+                <div class="mt-6">
+                    <span id="centibar-value" class="data-value font-mono font-extrabold text-green-600">--</span>
+                    <span class="text-2xl font-semibold text-gray-500 ml-2">cb</span>
+                </div>
+                <p id="centibar-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">--</span></p>
+            </div>
+        </div>
+
+        <!-- Error Message Box -->
+        <div id="error-message" class="hidden fixed bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-xl max-w-sm transition-all duration-500 transform translate-x-full">
+            <p class="font-bold">Error:</p>
+            <p id="error-text"></p>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Set Firebase logging level for debugging
+        setLogLevel('Debug');
+
+        // --- Firebase Globals (Mandatory Canvas Variables) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth;
+        let userId = null;
+        let isAuthReady = false;
+        let unsubscribeSnapshot = null;
+        
+        // --- DOM Elements ---
+        const resistanceValueEl = document.getElementById('resistance-value');
+        const centibarValueEl = document.getElementById('centibar-value');
+        const resistanceTimeEl = document.getElementById('resistance-time').querySelector('span');
+        const centibarTimeEl = document.getElementById('centibar-time').querySelector('span');
+        const loadingEl = document.getElementById('loading');
+        const dashboardContentEl = document.getElementById('dashboard-content');
+        const userIdDisplayEl = document.getElementById('user-id-display');
+        const errorMessageBox = document.getElementById('error-message');
+        const errorTextEl = document.getElementById('error-text');
+        
+        // --- Firestore Path Definition ---
+        // We will store the data publicly so the ESP32 doesn't need complex user authentication
+        const DATA_COLLECTION_PATH = `/artifacts/${appId}/public/data/soil_readings`;
+        
+        /**
+         * Displays a non-blocking error message.
+         */
+        function displayError(message) {
+            errorTextEl.textContent = message;
+            errorMessageBox.classList.remove('hidden', 'translate-x-full');
+            errorMessageBox.classList.add('translate-x-0');
+            setTimeout(() => {
+                errorMessageBox.classList.remove('translate-x-0');
+                errorMessageBox.classList.add('translate-x-full');
+                setTimeout(() => {
+                     errorMessageBox.classList.add('hidden');
+                }, 500);
+            }, 5000); // Hide after 5 seconds
+        }
+
+        /**
+         * Converts Firebase Timestamp object to a readable local time string.
+         */
+        function formatTimestamp(timestamp) {
+            if (!timestamp || !timestamp.toDate) return 'N/A';
+            try {
+                const date = timestamp.toDate();
+                return date.toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            } catch (e) {
+                console.error("Failed to parse date:", e);
+                return 'Invalid Date';
+            }
+        }
+
+        /**
+         * Initializes Firebase and authenticates the user.
+         */
+        async function setupFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplayEl.textContent = userId;
+                    } else {
+                        // Sign in anonymously if no token is available
+                        await signInAnonymously(auth);
+                        userId = auth.currentUser?.uid || crypto.randomUUID();
+                        userIdDisplayEl.textContent = userId;
+                    }
+                    isAuthReady = true;
+                    // Once authenticated, start listening for data
+                    startDataListener();
+                });
+                
+                // Use custom token if available
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                }
+
+            } catch (error) {
+                console.error("Firebase setup failed:", error);
+                loadingEl.classList.add('bg-red-100', 'text-red-700');
+                loadingEl.textContent = "FATAL ERROR: Firebase initialization failed. See console for details.";
+                displayError("Firebase initialization failed. Cannot connect to database.");
+            }
+        }
+
+        /**
+         * Sets up the real-time listener for the latest soil reading document.
+         */
+        function startDataListener() {
+            if (!isAuthReady || !db) return;
+
+            // Clear previous listener if it exists
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
+
+            const dataCollectionRef = collection(db, DATA_COLLECTION_PATH);
+            
+            // Query for the latest document added by the ESP32 (or any device)
+            // Note: The ESP32 must write a 'timestamp' field.
+            const q = query(dataCollectionRef, orderBy('timestamp', 'desc'), limit(1));
+            
+            loadingEl.classList.add('hidden');
+            dashboardContentEl.classList.remove('opacity-0');
+
+            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    console.log("No soil reading data found.");
+                    resistanceValueEl.textContent = '---';
+                    centibarValueEl.textContent = '---';
+                    resistanceTimeEl.textContent = 'No Data';
+                    centibarTimeEl.textContent = 'No Data';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    if (data.resistance_Ohms !== undefined && data.centibarValue !== undefined) {
+                        resistanceValueEl.textContent = parseFloat(data.resistance_Ohms).toFixed(0);
+                        centibarValueEl.textContent = parseFloat(data.centibarValue).toFixed(1);
+
+                        // Use the timestamp stored in the Firestore document
+                        const formattedTime = formatTimestamp(data.timestamp);
+                        resistanceTimeEl.textContent = formattedTime;
+                        centibarTimeEl.textContent = formattedTime;
+                        console.log("New data received:", data);
+                    } else {
+                        console.warn("Received document is missing expected fields (resistance_Ohms or centibarValue).", data);
+                    }
+                });
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+                displayError(`Failed to listen to data: ${error.message}`);
+            });
+        }
+
+        // --- Start Application ---
+        window.onload = setupFirebase;
+
+    </script>
+</body>
+</html>

@@ -87,23 +87,28 @@
     </div>
 
     <script type="module">
+        // --- Firebase CDN Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // We only need Firestore for data and Auth for connecting/identifying
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // Set Firebase logging level for debugging
         setLogLevel('Debug');
 
-        // --- Firebase Globals (Mandatory Canvas Variables) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        // --- Custom Firebase Configuration (From your console snippet) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBDOL3zBwbIAFCf2bPsaQYkgW4hOrIyZ-4",
+            authDomain: "watermark-200ss-sensor-reading.firebaseapp.com",
+            projectId: "watermark-200ss-sensor-reading",
+            storageBucket: "watermark-200ss-sensor-reading.firebasestorage.app",
+            messagingSenderId: "439214751369",
+            appId: "1:439214751369:web:6b83fe0e006f88e4205058",
+        };
+        
         let db, auth;
-        let userId = null;
         let isAuthReady = false;
-        let unsubscribeSnapshot = null;
         
         // --- DOM Elements ---
         const resistanceValueEl = document.getElementById('resistance-value');
@@ -112,13 +117,13 @@
         const centibarTimeEl = document.getElementById('centibar-time').querySelector('span');
         const loadingEl = document.getElementById('loading');
         const dashboardContentEl = document.getElementById('dashboard-content');
-        const userIdDisplayEl = document.getElementById('user-id-display');
         const errorMessageBox = document.getElementById('error-message');
         const errorTextEl = document.getElementById('error-text');
         
-        // --- Firestore Path Definition ---
-        // We will store the data publicly so the ESP32 doesn't need complex user authentication
-        const DATA_COLLECTION_PATH = `/artifacts/${appId}/public/data/soil_readings`;
+        // --- Firestore Path Definition (Must match ESP32's upload path) ---
+        // Assuming you use 'default-app-id' for the public artifact path, as Firebase REST requires static pathing.
+        const APP_ID = 'default-app-id'; // Use a standard ID for the public path
+        const DATA_COLLECTION_PATH = `/artifacts/${APP_ID}/public/data/soil_readings`;
         
         /**
          * Displays a non-blocking error message.
@@ -158,39 +163,33 @@
         }
 
         /**
-         * Initializes Firebase and authenticates the user.
+         * Initializes Firebase and signs in anonymously (since the data is public).
          */
         async function setupFirebase() {
             try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+                // Log config to debug
+                console.log("Attempting to initialize Firebase with config:", firebaseConfig);
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        userIdDisplayEl.textContent = userId;
-                    } else {
-                        // Sign in anonymously if no token is available
-                        await signInAnonymously(auth);
-                        userId = auth.currentUser?.uid || crypto.randomUUID();
-                        userIdDisplayEl.textContent = userId;
-                    }
-                    isAuthReady = true;
-                    // Once authenticated, start listening for data
-                    startDataListener();
-                });
+                const app = initializeApp(firebaseConfig);
                 
-                // Use custom token if available
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                }
+                // CRITICAL FIX: Explicitly get the Auth service instance before using it.
+                auth = getAuth(app); 
+                db = getFirestore(app);
+
+                // Sign in anonymously to get a user token, which is often required 
+                // even for reading public data under certain security rules.
+                await signInAnonymously(auth);
+                isAuthReady = true;
+                
+                // Once connected, start listening for data
+                startDataListener();
 
             } catch (error) {
                 console.error("Firebase setup failed:", error);
+                loadingEl.classList.remove('bg-blue-100', 'text-blue-700');
                 loadingEl.classList.add('bg-red-100', 'text-red-700');
-                loadingEl.textContent = "FATAL ERROR: Firebase initialization failed. See console for details.";
-                displayError("Firebase initialization failed. Cannot connect to database.");
+                loadingEl.textContent = `FATAL ERROR: Firebase failed to initialize. Details: ${error.message}`;
+                displayError("Firebase initialization failed. Check the console for the Auth/Configuration error.");
             }
         }
 
@@ -200,21 +199,18 @@
         function startDataListener() {
             if (!isAuthReady || !db) return;
 
-            // Clear previous listener if it exists
-            if (unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-            }
-
             const dataCollectionRef = collection(db, DATA_COLLECTION_PATH);
             
             // Query for the latest document added by the ESP32 (or any device)
-            // Note: The ESP32 must write a 'timestamp' field.
+            // It orders by the 'timestamp' field created by the ESP32
+            // NOTE: orderBy can require a composite index if the query becomes complex.
             const q = query(dataCollectionRef, orderBy('timestamp', 'desc'), limit(1));
             
             loadingEl.classList.add('hidden');
             dashboardContentEl.classList.remove('opacity-0');
 
-            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+            // onSnapshot gives us real-time updates without having to refresh the page
+            onSnapshot(q, (snapshot) => {
                 if (snapshot.empty) {
                     console.log("No soil reading data found.");
                     resistanceValueEl.textContent = '---';
@@ -237,12 +233,12 @@
                         centibarTimeEl.textContent = formattedTime;
                         console.log("New data received:", data);
                     } else {
-                        console.warn("Received document is missing expected fields (resistance_Ohms or centibarValue).", data);
+                        console.warn("Received document is missing expected fields.", data);
                     }
                 });
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                displayError(`Failed to listen to data: ${error.message}`);
+                displayError(`Failed to listen to data: ${error.message}. Check Security Rules!`);
             });
         }
 

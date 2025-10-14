@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDI-12 Soil Sensor Dashboard</title>
+    <title>Soil Moisture Dashboard (Mock Data)</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Inter Font -->
@@ -31,152 +31,57 @@
         <!-- Header -->
         <header class="mb-8 p-6 bg-white shadow-xl rounded-xl border-t-4 border-indigo-500">
             <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">SDI-12 Soil Sensor Monitoring</h1>
-            <p class="mt-2 text-lg text-gray-500">Real-time data fetched from local ESP32 Web Server.</p>
+            <p class="mt-2 text-lg text-gray-500">This is a **static mockup** displaying placeholder data.</p>
         </header>
-        
-        <!-- IP Configuration Section -->
-        <div class="bg-gray-50 p-4 rounded-lg shadow-inner mb-6 border border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">Server Configuration</h2>
-            <div class="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-                <label for="ip-input" class="text-sm font-medium text-gray-700 whitespace-nowrap min-w-[120px]">ESP32 IP Address:</label>
-                <input type="text" id="ip-input" value="192.168.1.XX" 
-                       class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm shadow-inner" 
-                       placeholder="e.g., 192.168.1.150">
-                <button id="connect-button" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 whitespace-nowrap">
-                    Connect
-                </button>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-                <span class="font-bold text-red-500">CRITICAL:</span> You must replace the IP address above with the one shown in your ESP32's Serial Monitor.
-            </p>
-        </div>
 
-        <!-- Status Indicator -->
+        <!-- Loading/Status Indicator - Removed, as no connection is needed -->
+        
         <div id="auth-info" class="text-center mt-4 text-sm text-gray-600">
-            Status: <span id="connection-status" class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Awaiting connection...</span>
+            Status: <span class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Offline Mockup Mode</span>
         </div>
 
         <!-- Dashboard Grid -->
+        <!-- NOTE: Data values are set in the inner HTML for this mockup -->
         <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             
             <!-- Soil Resistance Card -->
             <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-indigo-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Soil Resistance (Raw)</h2>
-                    <!-- SVG Icon for Resistance -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2v20M17 5H7l5 5L7 15h10l-5 5"></path>
                     </svg>
                 </div>
                 <div class="mt-6">
-                    <span id="resistance-value" class="data-value font-mono font-extrabold text-indigo-600">--</span>
+                    <!-- Placeholder Data -->
+                    <span id="resistance-value" class="data-value font-mono font-extrabold text-indigo-600">25000</span>
                     <span class="text-2xl font-semibold text-gray-500 ml-2">Ohms</span>
                 </div>
-                <p id="resistance-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">N/A</span></p>
+                <p id="resistance-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">2025-01-01 12:00:00</span></p>
             </div>
 
             <!-- Centibar (Water Potential) Card -->
             <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-green-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Water Potential (Centibar)</h2>
-                    <!-- SVG Icon for Water -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                        <path d="M12 18V6"></path>
-                        <path d="M10 16l2 2 2-2"></path>
+                        <path d="M9 12l2 2 4-4"></path>
                     </svg>
                 </div>
                 <div class="mt-6">
-                    <span id="centibar-value" class="data-value font-mono font-extrabold text-green-600">--</span>
+                    <!-- Placeholder Data -->
+                    <span id="centibar-value" class="data-value font-mono font-extrabold text-green-600">35.5</span>
                     <span class="text-2xl font-semibold text-gray-500 ml-2">cb</span>
                 </div>
-                <p id="centibar-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">N/A</span></p>
+                <p id="centibar-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">2025-01-01 12:00:00</span></p>
             </div>
         </div>
 
+        <!-- Error Message Box - Removed, as no errors will occur without connection -->
+
     </div>
 
-    <script>
-        const ipInput = document.getElementById('ip-input');
-        const connectButton = document.getElementById('connect-button');
-        const statusElement = document.getElementById('connection-status');
-        const FETCH_INTERVAL_MS = 10000; // Poll every 10 seconds
-        let fetchIntervalId = null;
-
-        /**
-         * Clears any existing interval and starts a new one based on the current IP.
-         */
-        function startFetching(ip) {
-            // Clear previous interval if it exists
-            if (fetchIntervalId) {
-                clearInterval(fetchIntervalId);
-            }
-            
-            // Set the new interval
-            fetchDataAndUpdateDashboard(ip); // Initial fetch
-            fetchIntervalId = setInterval(() => fetchDataAndUpdateDashboard(ip), FETCH_INTERVAL_MS);
-        }
-
-        /**
-         * Fetches data from the ESP32 and updates the dashboard.
-         */
-        async function fetchDataAndUpdateDashboard(ip) {
-            if (!ip || ip.trim() === '192.168.1.XX') {
-                statusElement.textContent = "IP Required: Please enter ESP32 IP.";
-                statusElement.className = "font-mono bg-red-200 px-2 py-0.5 rounded text-xs text-red-800";
-                return;
-            }
-
-            const DATA_ENDPOINT = `http://${ip}/data`;
-            
-            // Set status to fetching
-            statusElement.textContent = `Fetching from ${ip}...`;
-            statusElement.className = "font-mono bg-yellow-200 px-2 py-0.5 rounded text-xs text-yellow-800";
-
-            try {
-                // Use fetch with cache: 'no-store' to ensure fresh data
-                const response = await fetch(DATA_ENDPOINT, { cache: 'no-store' }); 
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                // 1. Update Soil Resistance Card
-                document.getElementById('resistance-value').textContent = data.resistance.toLocaleString('en-US');
-                document.getElementById('resistance-time').querySelector('span').textContent = data.timestamp;
-
-                // 2. Update Water Potential Card
-                document.getElementById('centibar-value').textContent = parseFloat(data.centibar).toFixed(1);
-                document.getElementById('centibar-time').querySelector('span').textContent = data.timestamp;
-
-                // Update status to online/connected
-                statusElement.textContent = `Online: ${ip}`;
-                statusElement.className = "font-mono bg-green-200 px-2 py-0.5 rounded text-xs text-green-800";
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                
-                // Update status to indicate an error
-                statusElement.textContent = `Error: Cannot reach server at ${ip}. Check IP or Network.`;
-                statusElement.className = "font-mono bg-red-200 px-2 py-0.5 rounded text-xs text-red-800";
-                // Keep the interval running to retry connection
-            }
-        }
-
-        // Event handler for the Connect button
-        connectButton.addEventListener('click', () => {
-            const newIp = ipInput.value.trim();
-            startFetching(newIp);
-        });
-
-        // Load initialization
-        window.onload = () => {
-            // Attempt to connect using the initial value in the input field
-            startFetching(ipInput.value.trim());
-        }
-
-    </script>
+    <!-- Removed all Firebase JavaScript logic -->
 </body>
 </html>

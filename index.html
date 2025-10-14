@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soil Moisture Dashboard (Firebase)</title>
+    <title>SDI-12 Soil Sensor Dashboard</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Inter Font -->
@@ -31,25 +31,39 @@
         <!-- Header -->
         <header class="mb-8 p-6 bg-white shadow-xl rounded-xl border-t-4 border-indigo-500">
             <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight">SDI-12 Soil Sensor Monitoring</h1>
-            <p class="mt-2 text-lg text-gray-500">Live data fetched from **Firebase Firestore** in real-time.</p>
+            <p class="mt-2 text-lg text-gray-500">Real-time data fetched from local ESP32 Web Server.</p>
         </header>
-
-        <!-- Loading/Status Indicator -->
-        <div id="loading" class="text-center p-6 bg-blue-100 rounded-xl shadow-md text-blue-700 font-semibold transition-all duration-300">
-            Connecting to Firebase...
-        </div>
         
+        <!-- IP Configuration Section -->
+        <div class="bg-gray-50 p-4 rounded-lg shadow-inner mb-6 border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Server Configuration</h2>
+            <div class="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
+                <label for="ip-input" class="text-sm font-medium text-gray-700 whitespace-nowrap min-w-[120px]">ESP32 IP Address:</label>
+                <input type="text" id="ip-input" value="192.168.1.XX" 
+                       class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm shadow-inner" 
+                       placeholder="e.g., 192.168.1.150">
+                <button id="connect-button" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 whitespace-nowrap">
+                    Connect
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                <span class="font-bold text-red-500">CRITICAL:</span> You must replace the IP address above with the one shown in your ESP32's Serial Monitor.
+            </p>
+        </div>
+
+        <!-- Status Indicator -->
         <div id="auth-info" class="text-center mt-4 text-sm text-gray-600">
-            User ID: <span id="user-id-display" class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Awaiting Auth...</span>
+            Status: <span id="connection-status" class="font-mono bg-gray-200 px-2 py-0.5 rounded text-xs">Awaiting connection...</span>
         </div>
 
         <!-- Dashboard Grid -->
-        <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 opacity-0 transition-opacity duration-500">
+        <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             
             <!-- Soil Resistance Card -->
             <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-indigo-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Soil Resistance (Raw)</h2>
+                    <!-- SVG Icon for Resistance -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2v20M17 5H7l5 5L7 15h10l-5 5"></path>
                     </svg>
@@ -58,192 +72,110 @@
                     <span id="resistance-value" class="data-value font-mono font-extrabold text-indigo-600">--</span>
                     <span class="text-2xl font-semibold text-gray-500 ml-2">Ohms</span>
                 </div>
-                <p id="resistance-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">--</span></p>
+                <p id="resistance-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">N/A</span></p>
             </div>
 
             <!-- Centibar (Water Potential) Card -->
             <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl hover:shadow-green-300 transition-shadow duration-300 transform hover:scale-[1.01] border border-gray-100">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-gray-700 uppercase tracking-wider">Water Potential (Centibar)</h2>
+                    <!-- SVG Icon for Water -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                        <path d="M9 12l2 2 4-4"></path>
+                        <path d="M12 18V6"></path>
+                        <path d="M10 16l2 2 2-2"></path>
                     </svg>
                 </div>
                 <div class="mt-6">
                     <span id="centibar-value" class="data-value font-mono font-extrabold text-green-600">--</span>
                     <span class="text-2xl font-semibold text-gray-500 ml-2">cb</span>
                 </div>
-                <p id="centibar-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">--</span></p>
+                <p id="centibar-time" class="mt-4 text-sm text-gray-400">Last reading time: <span class="font-medium text-gray-500">N/A</span></p>
             </div>
-        </div>
-
-        <!-- Error Message Box -->
-        <div id="error-message" class="hidden fixed bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-xl max-w-sm transition-all duration-500 transform translate-x-full">
-            <p class="font-bold">Error:</p>
-            <p id="error-text"></p>
         </div>
 
     </div>
 
-    <script type="module">
-        // --- Firebase CDN Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // We only need Firestore for data and Auth for connecting/identifying
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Set Firebase logging level for debugging
-        setLogLevel('Debug');
-
-        // --- Custom Firebase Configuration (From your console snippet) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBDOL3zBwbIAFCf2bPsaQYkgW4hOrIyZ-4",
-            authDomain: "watermark-200ss-sensor-reading.firebaseapp.com",
-            projectId: "watermark-200ss-sensor-reading",
-            storageBucket: "watermark-200ss-sensor-reading.firebasestorage.app",
-            messagingSenderId: "439214751369",
-            appId: "1:439214751369:web:6b83fe0e006f88e4205058",
-        };
-        
-        let db, auth;
-        let isAuthReady = false;
-        
-        // --- DOM Elements ---
-        const resistanceValueEl = document.getElementById('resistance-value');
-        const centibarValueEl = document.getElementById('centibar-value');
-        const resistanceTimeEl = document.getElementById('resistance-time').querySelector('span');
-        const centibarTimeEl = document.getElementById('centibar-time').querySelector('span');
-        const loadingEl = document.getElementById('loading');
-        const dashboardContentEl = document.getElementById('dashboard-content');
-        const errorMessageBox = document.getElementById('error-message');
-        const errorTextEl = document.getElementById('error-text');
-        
-        // --- Firestore Path Definition (Must match ESP32's upload path) ---
-        // Assuming you use 'default-app-id' for the public artifact path, as Firebase REST requires static pathing.
-        const APP_ID = 'default-app-id'; // Use a standard ID for the public path
-        const DATA_COLLECTION_PATH = `/artifacts/${APP_ID}/public/data/soil_readings`;
-        
-        /**
-         * Displays a non-blocking error message.
-         */
-        function displayError(message) {
-            errorTextEl.textContent = message;
-            errorMessageBox.classList.remove('hidden', 'translate-x-full');
-            errorMessageBox.classList.add('translate-x-0');
-            setTimeout(() => {
-                errorMessageBox.classList.remove('translate-x-0');
-                errorMessageBox.classList.add('translate-x-full');
-                setTimeout(() => {
-                     errorMessageBox.classList.add('hidden');
-                }, 500);
-            }, 5000); // Hide after 5 seconds
-        }
+    <script>
+        const ipInput = document.getElementById('ip-input');
+        const connectButton = document.getElementById('connect-button');
+        const statusElement = document.getElementById('connection-status');
+        const FETCH_INTERVAL_MS = 10000; // Poll every 10 seconds
+        let fetchIntervalId = null;
 
         /**
-         * Converts Firebase Timestamp object to a readable local time string.
+         * Clears any existing interval and starts a new one based on the current IP.
          */
-        function formatTimestamp(timestamp) {
-            if (!timestamp || !timestamp.toDate) return 'N/A';
-            try {
-                const date = timestamp.toDate();
-                return date.toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            } catch (e) {
-                console.error("Failed to parse date:", e);
-                return 'Invalid Date';
+        function startFetching(ip) {
+            // Clear previous interval if it exists
+            if (fetchIntervalId) {
+                clearInterval(fetchIntervalId);
             }
+            
+            // Set the new interval
+            fetchDataAndUpdateDashboard(ip); // Initial fetch
+            fetchIntervalId = setInterval(() => fetchDataAndUpdateDashboard(ip), FETCH_INTERVAL_MS);
         }
 
         /**
-         * Initializes Firebase and signs in anonymously (since the data is public).
+         * Fetches data from the ESP32 and updates the dashboard.
          */
-        async function setupFirebase() {
-            try {
-                // Log config to debug
-                console.log("Attempting to initialize Firebase with config:", firebaseConfig);
-
-                const app = initializeApp(firebaseConfig);
-                
-                // CRITICAL FIX: Explicitly get the Auth service instance before using it.
-                auth = getAuth(app); 
-                db = getFirestore(app);
-
-                // Sign in anonymously to get a user token, which is often required 
-                // even for reading public data under certain security rules.
-                await signInAnonymously(auth);
-                isAuthReady = true;
-                
-                // Once connected, start listening for data
-                startDataListener();
-
-            } catch (error) {
-                console.error("Firebase setup failed:", error);
-                loadingEl.classList.remove('bg-blue-100', 'text-blue-700');
-                loadingEl.classList.add('bg-red-100', 'text-red-700');
-                loadingEl.textContent = `FATAL ERROR: Firebase failed to initialize. Details: ${error.message}`;
-                displayError("Firebase initialization failed. Check the console for the Auth/Configuration error.");
+        async function fetchDataAndUpdateDashboard(ip) {
+            if (!ip || ip.trim() === '192.168.1.XX') {
+                statusElement.textContent = "IP Required: Please enter ESP32 IP.";
+                statusElement.className = "font-mono bg-red-200 px-2 py-0.5 rounded text-xs text-red-800";
+                return;
             }
-        }
 
-        /**
-         * Sets up the real-time listener for the latest soil reading document.
-         */
-        function startDataListener() {
-            if (!isAuthReady || !db) return;
-
-            const dataCollectionRef = collection(db, DATA_COLLECTION_PATH);
+            const DATA_ENDPOINT = `http://${ip}/data`;
             
-            // Query for the latest document added by the ESP32 (or any device)
-            // It orders by the 'timestamp' field created by the ESP32
-            // NOTE: orderBy can require a composite index if the query becomes complex.
-            const q = query(dataCollectionRef, orderBy('timestamp', 'desc'), limit(1));
-            
-            loadingEl.classList.add('hidden');
-            dashboardContentEl.classList.remove('opacity-0');
+            // Set status to fetching
+            statusElement.textContent = `Fetching from ${ip}...`;
+            statusElement.className = "font-mono bg-yellow-200 px-2 py-0.5 rounded text-xs text-yellow-800";
 
-            // onSnapshot gives us real-time updates without having to refresh the page
-            onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) {
-                    console.log("No soil reading data found.");
-                    resistanceValueEl.textContent = '---';
-                    centibarValueEl.textContent = '---';
-                    resistanceTimeEl.textContent = 'No Data';
-                    centibarTimeEl.textContent = 'No Data';
-                    return;
+            try {
+                // Use fetch with cache: 'no-store' to ensure fresh data
+                const response = await fetch(DATA_ENDPOINT, { cache: 'no-store' }); 
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    
-                    if (data.resistance_Ohms !== undefined && data.centibarValue !== undefined) {
-                        resistanceValueEl.textContent = parseFloat(data.resistance_Ohms).toFixed(0);
-                        centibarValueEl.textContent = parseFloat(data.centibarValue).toFixed(1);
+                const data = await response.json();
+                
+                // 1. Update Soil Resistance Card
+                document.getElementById('resistance-value').textContent = data.resistance.toLocaleString('en-US');
+                document.getElementById('resistance-time').querySelector('span').textContent = data.timestamp;
 
-                        // Use the timestamp stored in the Firestore document
-                        const formattedTime = formatTimestamp(data.timestamp);
-                        resistanceTimeEl.textContent = formattedTime;
-                        centibarTimeEl.textContent = formattedTime;
-                        console.log("New data received:", data);
-                    } else {
-                        console.warn("Received document is missing expected fields.", data);
-                    }
-                });
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-                displayError(`Failed to listen to data: ${error.message}. Check Security Rules!`);
-            });
+                // 2. Update Water Potential Card
+                document.getElementById('centibar-value').textContent = parseFloat(data.centibar).toFixed(1);
+                document.getElementById('centibar-time').querySelector('span').textContent = data.timestamp;
+
+                // Update status to online/connected
+                statusElement.textContent = `Online: ${ip}`;
+                statusElement.className = "font-mono bg-green-200 px-2 py-0.5 rounded text-xs text-green-800";
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                
+                // Update status to indicate an error
+                statusElement.textContent = `Error: Cannot reach server at ${ip}. Check IP or Network.`;
+                statusElement.className = "font-mono bg-red-200 px-2 py-0.5 rounded text-xs text-red-800";
+                // Keep the interval running to retry connection
+            }
         }
 
-        // --- Start Application ---
-        window.onload = setupFirebase;
+        // Event handler for the Connect button
+        connectButton.addEventListener('click', () => {
+            const newIp = ipInput.value.trim();
+            startFetching(newIp);
+        });
+
+        // Load initialization
+        window.onload = () => {
+            // Attempt to connect using the initial value in the input field
+            startFetching(ipInput.value.trim());
+        }
 
     </script>
 </body>

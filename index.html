@@ -49,14 +49,15 @@
         </div>
 
         <!-- Temperature Card -->
-        <div id="temperature-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
-            <p class="text-sm font-semibold uppercase text-gray-500">Temperature</p>
+        <div id="temperature-card" class="data-card p-6 rounded-xl shadow-lg transition duration-300 flex flex-col justify-between">
+            <p class="text-sm font-semibold uppercase text-white">Temperature</p>
             <div class="flex items-end justify-between mt-2">
-                <div id="temperature" class="value text-5xl font-bold text-gray-800">--</div>
-                <span class="text-xl font-medium text-gray-400">°C</span>
+                <div id="temperature" class="value text-5xl font-bold text-white">--</div>
+                <span class="text-xl font-medium text-white">°C</span>
             </div>
-            <div id="temperature-timestamp" class="text-xs text-gray-400 mt-2">--</div>
+        <div id="temperature-timestamp" class="text-xs text-white mt-2">--</div>
         </div>
+
 
         <!-- Status Card -->
         <div id="status-card" class="data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent flex flex-col justify-between">
@@ -126,21 +127,53 @@
             } catch { return { time: '--', date: 'Error' }; }
         }
 
+        function updateTemperatureStyle(tempC) {
+            const tempCardEl = document.getElementById("temperature-card");
+            const tempTextEl = document.getElementById("temperature");
+            const tempTsEl = document.getElementById("temperature-timestamp");
+
+            // Reset classes
+            tempCardEl.className = 'data-card p-6 rounded-xl shadow-lg transition duration-300 flex flex-col justify-between';
+            tempTextEl.className = 'value text-5xl font-bold';
+
+            let bgColor = 'bg-gray-400';
+            let textColor = 'text-white';
+    
+            if (tempC < 15) {            // Cold
+                bgColor = 'bg-blue-600';
+                textColor = 'text-white';
+            } else if (tempC <= 30) {    // Optimal
+                bgColor = 'bg-green-600';
+                textColor = 'text-white';
+            } else {                     // Hot
+                bgColor = 'bg-red-600';
+                textColor = 'text-white';
+            }
+
+            tempCardEl.classList.add(bgColor);
+            tempTextEl.classList.add(textColor);
+            tempTsEl.classList.add(textColor);
+        }
+
         onValue(sensorRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const { time } = formatTimestamp(data.timestamp);
 
                 resistanceEl.innerText = data.resistance_kOhm.toFixed(2);
-                centibarEl.innerText = data.centibar.toFixed(0);
-                temperatureEl.innerText = data.temperature_C?.toFixed(1) ?? '--';
-                statusEl.innerText = data.status ?? 'N/A';
-
                 resistanceTsEl.innerText = `Last updated: ${time}`;
-                centibarTsEl.innerText = `Last updated: ${time}`;
-                temperatureTsEl.innerText = `Last updated: ${time}`;
-                statusTsEl.innerText = `Last updated: ${time}`;
 
+                centibarEl.innerText = data.centibar.toFixed(0);
+                centibarTsEl.innerText = `Last updated: ${time}`;
+
+                temperatureEl.innerText = data.temperature_C?.toFixed(1) ?? '--';
+                temperatureTsEl.innerText = `Last updated: ${time}`;
+                if (data.temperature_C !== undefined) {
+                    updateTemperatureStyle(data.temperature_C);
+            }
+
+                statusEl.innerText = data.status ?? 'N/A';
+                statusTsEl.innerText = `Last updated: ${time}`;
                 updateStatusStyle(data.status ?? 'N/A');
 
                 dataCards.forEach(card => {

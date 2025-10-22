@@ -4,23 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Irrigation Sensor Dashboard</title>
-    <!-- Tailwind CSS CDN for modern styling and responsiveness -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom font import (Inter is clean and modern) */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa; /* Light background */
-        }
-        /* Define a simple animation for value updates */
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0px rgba(0, 135, 90, 0.4); }
             100% { box-shadow: 0 0 0 10px rgba(0, 135, 90, 0); }
         }
-        .pulse-on-update {
-            animation: pulse-ring 0.6s ease-out;
-        }
+        .pulse-on-update { animation: pulse-ring 0.6s ease-out; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -32,55 +26,55 @@
         <p class="text-gray-500 mt-2 text-lg">Real-time Watermark Sensor Readings</p>
     </header>
 
-    <!-- Dashboard Grid Container -->
-    <!-- Responsive layout: 1 column on mobile, 2 columns on medium, 4 columns on large -->
     <div id="dashboard-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
 
         <!-- Resistance Card -->
-        <div id="resistance-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
+        <div id="resistance-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
             <p class="text-sm font-semibold uppercase text-gray-500">Resistance</p>
             <div class="flex items-end justify-between mt-2">
                 <div id="resistance" class="value text-5xl font-bold text-gray-800">--</div>
                 <span class="text-xl font-medium text-gray-400">k&Omega;</span>
             </div>
+            <div id="resistance-timestamp" class="text-xs text-gray-400 mt-2">--</div>
         </div>
 
-        <!-- Soil Tension Card (Centibar) -->
-        <div id="centibar-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
+        <!-- Soil Tension Card -->
+        <div id="centibar-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
             <p class="text-sm font-semibold uppercase text-gray-500">Soil Tension</p>
             <div class="flex items-end justify-between mt-2">
                 <div id="centibar" class="value text-5xl font-bold text-gray-800">--</div>
                 <span class="text-xl font-medium text-gray-400">cbar</span>
             </div>
+            <div id="centibar-timestamp" class="text-xs text-gray-400 mt-2">--</div>
         </div>
 
-        <!-- Status Card (Dynamic Coloring) -->
-        <div id="status-card" class="data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent">
+        <!-- Temperature Card -->
+        <div id="temperature-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
+            <p class="text-sm font-semibold uppercase text-gray-500">Temperature</p>
+            <div class="flex items-end justify-between mt-2">
+                <div id="temperature" class="value text-5xl font-bold text-gray-800">--</div>
+                <span class="text-xl font-medium text-gray-400">°C</span>
+            </div>
+            <div id="temperature-timestamp" class="text-xs text-gray-400 mt-2">--</div>
+        </div>
+
+        <!-- Status Card -->
+        <div id="status-card" class="data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent flex flex-col justify-between">
             <p class="text-sm font-semibold uppercase text-white">Irrigation Status</p>
             <div id="status" class="value text-4xl font-extrabold mt-2 text-white">--</div>
-        </div>
-
-        <!-- Timestamp Card -->
-        <div id="timestamp-card" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
-            <p class="text-sm font-semibold uppercase text-gray-500">Last Reading</p>
-            <div id="timestamp-time" class="text-3xl font-bold text-gray-800 mt-2">--</div>
-            <div id="timestamp-date" class="text-sm text-gray-500 mt-1">--</div>
+            <div id="status-timestamp" class="text-xs text-white mt-2">--</div>
         </div>
 
     </div>
-    
-    <!-- Footer/Source -->
+
     <footer class="text-center mt-12 text-sm text-gray-400">
         <p>Data provided by Irrometer Watermark Sensor via Firebase Realtime Database.</p>
     </footer>
 
-    <!-- JavaScript & Firebase Logic -->
     <script type="module">
-        // Import necessary functions from Firebase modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-        // --- Firebase Configuration (Using the user's provided config) ---
         const firebaseConfig = {
             apiKey: "AIzaSyD72NRZtJ5s_1Trv1jBbISvz80ni1uwne0",
             authDomain: "irrometer-watermark-sensor.firebaseapp.com",
@@ -90,135 +84,74 @@
             messagingSenderId: "81648679067",
             appId: "1:81648679067:web:1f473773a7a914f24fae3e"
         };
-        // ----------------------------------------------------------------
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        
-        // Data reference path
         const sensorRef = ref(db, "watermark_sensor");
 
-        // DOM elements
         const resistanceEl = document.getElementById("resistance");
         const centibarEl = document.getElementById("centibar");
+        const temperatureEl = document.getElementById("temperature");
         const statusEl = document.getElementById("status");
-        const timestampTimeEl = document.getElementById("timestamp-time");
-        const timestampDateEl = document.getElementById("timestamp-date");
+
+        const resistanceTsEl = document.getElementById("resistance-timestamp");
+        const centibarTsEl = document.getElementById("centibar-timestamp");
+        const temperatureTsEl = document.getElementById("temperature-timestamp");
+        const statusTsEl = document.getElementById("status-timestamp");
+
         const statusCardEl = document.getElementById("status-card");
         const dataCards = document.querySelectorAll(".data-card");
 
-        // Helper function to update status card styling
         function updateStatusStyle(status) {
-            // Remove all existing status classes
-            statusCardEl.className = 'data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent';
-
-            let bgColor = 'bg-gray-400'; // Default gray
-            let ringColor = 'ring-gray-300';
-
-            // Apply specific Tailwind classes based on status
+            statusCardEl.className = 'data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent flex flex-col justify-between';
+            let bgColor = 'bg-gray-400', ringColor = 'ring-gray-300';
             switch (status.toLowerCase()) {
-                case 'wet':
-                    bgColor = 'bg-blue-600';
-                    ringColor = 'ring-blue-300';
-                    break;
-                case 'optimal':
-                    bgColor = 'bg-green-600';
-                    ringColor = 'ring-green-300';
-                    break;
-                case 'moderate stress':
-                    bgColor = 'bg-yellow-600';
-                    ringColor = 'ring-yellow-300';
-                    break;
+                case 'wet': bgColor = 'bg-blue-600'; ringColor = 'ring-blue-300'; break;
+                case 'optimal': bgColor = 'bg-green-600'; ringColor = 'ring-green-300'; break;
+                case 'moderate stress': bgColor = 'bg-yellow-600'; ringColor = 'ring-yellow-300'; break;
                 case 'severe stress':
-                case 'dry':
-                    bgColor = 'bg-red-600';
-                    ringColor = 'ring-red-300';
-                    break;
-                default:
-                    // Use default classes
-                    break;
+                case 'dry': bgColor = 'bg-red-600'; ringColor = 'ring-red-300'; break;
             }
-            
-            // Re-apply base classes and dynamic color classes
             statusCardEl.classList.add(bgColor, ringColor, 'ring-opacity-50');
         }
 
-        // Helper function to format the timestamp
-        function formatTimestamp(timestampString) {
+        function formatTimestamp(ts) {
             try {
-                // Assuming timestampString is in a format like '2023-10-20 10:30:00' or ISO
-                const date = new Date(timestampString);
-                
-                // Check if the date is valid
-                if (isNaN(date)) {
-                    return { time: '--', date: 'Invalid Date Format' };
-                }
-
-                const time = date.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
-                });
-                
-                const day = date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-
-                return { time: time, date: day };
-
-            } catch (e) {
-                console.error("Error parsing timestamp:", e);
-                return { time: '--', date: 'Format Error' };
-            }
+                const date = new Date(ts);
+                if (isNaN(date)) return { time: '--', date: 'Invalid Date' };
+                return {
+                    time: date.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+                    date: date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+                };
+            } catch { return { time: '--', date: 'Error' }; }
         }
 
-
-        // Real-time listener for data updates
         onValue(sensorRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                // 1. Get current values for animation check
-                const currentResistance = resistanceEl.innerText;
-                const currentCentibar = centibarEl.innerText;
+                const { time } = formatTimestamp(data.timestamp);
 
-                // 2. Update text content
-                const resistanceValue = data.resistance_kOhm.toFixed(2);
-                const centibarValue = data.centibar.toFixed(0); // Centibar usually displayed as whole number
-                const statusValue = data.status || 'N/A';
-                
-                resistanceEl.innerText = resistanceValue;
-                centibarEl.innerText = centibarValue;
-                statusEl.innerText = statusValue;
+                resistanceEl.innerText = data.resistance_kOhm.toFixed(2);
+                centibarEl.innerText = data.centibar.toFixed(0);
+                temperatureEl.innerText = data.temperature_C?.toFixed(1) ?? '--';
+                statusEl.innerText = data.status ?? 'N/A';
 
-                // 3. Update Timestamp
-                const { time, date } = formatTimestamp(data.timestamp);
-                timestampTimeEl.innerText = time;
-                timestampDateEl.innerText = date;
+                resistanceTsEl.innerText = `Last updated: ${time}`;
+                centibarTsEl.innerText = `Last updated: ${time}`;
+                temperatureTsEl.innerText = `Last updated: ${time}`;
+                statusTsEl.innerText = `Last updated: ${time}`;
 
-                // 4. Update Status Card Color
-                updateStatusStyle(statusValue);
-                
-                // 5. Add Pulse Animation for visual feedback on update
+                updateStatusStyle(data.status ?? 'N/A');
+
                 dataCards.forEach(card => {
-                    // Remove existing animation class
                     card.classList.remove('pulse-on-update');
-                    // Force reflow/repaint
-                    void card.offsetWidth; 
-                    // Add animation class back
+                    void card.offsetWidth;
                     card.classList.add('pulse-on-update');
                 });
-                
-            } else {
-                console.log("No data available from the sensor reference.");
             }
         }, (error) => {
-            console.error("Firebase Realtime Database error:", error);
-            // Display error state on the dashboard
-            resistanceEl.innerText = 'Error';
-            centibarEl.innerText = 'Error';
+            console.error(error);
+            resistanceEl.innerText = centibarEl.innerText = temperatureEl.innerText = 'Error';
             statusEl.innerText = 'Failed';
             updateStatusStyle('error');
         });

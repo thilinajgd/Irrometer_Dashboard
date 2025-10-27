@@ -3,84 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Irrigation Sensor Dashboard</title>
-    <!-- Tailwind CSS CDN for modern styling and responsiveness -->
+    <title>Soil Moisture & Temperature Dashboard</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
-        /* Custom font import (Inter is clean and modern) */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa; /* Light background */
-        }
-        /* Define a simple animation for value updates */
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0px rgba(0, 135, 90, 0.4); }
-            100% { box-shadow: 0 0 0 10px rgba(0, 135, 90, 0); }
-        }
-        .pulse-on-update {
-            animation: pulse-ring 0.6s ease-out;
-        }
+        /* Custom font */
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="bg-gray-50 min-h-screen p-4 sm:p-8">
 
-    <header class="text-center mb-10">
-        <h1 class="text-4xl font-extrabold text-[#2a4d69] tracking-tight">
-            💧 <span class="text-[#00875a]">Soil Health</span> Monitoring
-        </h1>
-        <p class="text-gray-500 mt-2 text-lg">Real-time Watermark Sensor Readings</p>
-    </header>
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-900 mb-2">
+                Smart Irrigation Monitor
+            </h1>
+            <p id="system-status" class="text-gray-600 text-sm">
+                Status: <span class="font-semibold text-red-500">Initializing...</span>
+            </p>
+        </header>
 
-    <!-- Dashboard Grid Container -->
-    <!-- Responsive layout: 1 column on mobile, 2 columns on medium, 4 columns on large -->
-    <div id="dashboard-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <!-- Metric Cards -->
+        <div id="metric-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- Resistance Card -->
+            <div id="resistance-card" class="card-metric bg-white p-6 rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-xl border-t-4 border-yellow-500">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Resistance</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <div class="text-5xl font-bold text-gray-900 mb-2">
+                    <span id="display-ohms">---</span>
+                    <span class="text-xl font-normal text-gray-500">Ohms</span>
+                </div>
+                <p id="update-ohms" class="text-xs text-gray-500 pt-2 border-t mt-4">Last updated: N/A</p>
+            </div>
 
-        <!-- Resistance Card -->
-        <div id="resistance-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
-            <p class="text-sm font-semibold uppercase text-gray-500">Resistance</p>
-            <div class="flex items-end justify-between mt-2">
-                <div id="resistance" class="value text-5xl font-bold text-gray-800">--</div>
-                <span class="text-xl font-medium text-gray-400">k&Omega;</span>
+            <!-- Temperature Card -->
+            <div id="temperature-card" class="card-metric bg-white p-6 rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-xl border-t-4 border-red-500">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Temperature</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 10a4 4 0 01-4 4v7a1 1 0 01-1 1H5a1 1 0 01-1-1v-7a4 4 0 01-4-4v-1a1 1 0 011-1h3a1 1 0 011 1v1h-1v1a2 2 0 002 2h4a2 2 0 002-2v-1h-1v-1a1 1 0 011-1h3a1 1 0 011 1v1a4 4 0 01-4 4z" />
+                        <path d="M12 18V3" />
+                    </svg>
+                </div>
+                <div class="text-5xl font-bold text-gray-900 mb-2">
+                    <span id="display-temp">---</span>
+                    <span class="text-xl font-normal text-gray-500">°C</span>
+                </div>
+                <p id="update-temp" class="text-xs text-gray-500 pt-2 border-t mt-4">Last updated: N/A</p>
+            </div>
+
+            <!-- Centibar Card (Soil Water Potential) -->
+            <div id="centibar-card" class="card-metric bg-white p-6 rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-xl border-t-4 border-blue-500">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Soil Water Potential</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10m-8-4l8 4m-8-4l8 4" />
+                    </svg>
+                </div>
+                <div class="text-5xl font-bold text-gray-900 mb-2">
+                    <span id="display-centibar">---</span>
+                    <span class="text-xl font-normal text-gray-500">cb</span>
+                </div>
+                <!-- Status Bar -->
+                <p id="status-text" class="text-sm font-medium text-blue-600 my-1">Status: N/A</p>
+                <p id="update-centibar" class="text-xs text-gray-500 pt-2 border-t mt-4">Last updated: N/A</p>
             </div>
         </div>
 
-        <!-- Soil Tension Card (Centibar) -->
-        <div id="centibar-card" class="data-card bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
-            <p class="text-sm font-semibold uppercase text-gray-500">Soil Tension</p>
-            <div class="flex items-end justify-between mt-2">
-                <div id="centibar" class="value text-5xl font-bold text-gray-800">--</div>
-                <span class="text-xl font-medium text-gray-400">cbar</span>
+        <!-- Centibar History Chart -->
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-semibold text-blue-900 mb-4">Centibar Trend (Last 24 Readings)</h2>
+            <div class="relative h-96">
+                <canvas id="centibarChart"></canvas>
             </div>
         </div>
-
-        <!-- Status Card (Dynamic Coloring) -->
-        <div id="status-card" class="data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent">
-            <p class="text-sm font-semibold uppercase text-white">Irrigation Status</p>
-            <div id="status" class="value text-4xl font-extrabold mt-2 text-white">--</div>
-        </div>
-
-        <!-- Timestamp Card -->
-        <div id="timestamp-card" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between">
-            <p class="text-sm font-semibold uppercase text-gray-500">Last Reading</p>
-            <div id="timestamp-time" class="text-3xl font-bold text-gray-800 mt-2">--</div>
-            <div id="timestamp-date" class="text-sm text-gray-500 mt-1">--</div>
-        </div>
-
     </div>
-    
-    <!-- Footer/Source -->
-    <footer class="text-center mt-12 text-sm text-gray-400">
-        <p>Data provided by Irrometer Watermark Sensor via Firebase Realtime Database.</p>
-    </footer>
 
-    <!-- JavaScript & Firebase Logic -->
+    <!-- Firebase and Application Logic -->
     <script type="module">
-        // Import necessary functions from Firebase modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-        // --- Firebase Configuration (Using the user's provided config) ---
         const firebaseConfig = {
             apiKey: "AIzaSyD72NRZtJ5s_1Trv1jBbISvz80ni1uwne0",
             authDomain: "irrometer-watermark-sensor.firebaseapp.com",
@@ -88,140 +100,201 @@
             projectId: "irrometer-watermark-sensor",
             storageBucket: "irrometer-watermark-sensor.firebasestorage.app",
             messagingSenderId: "81648679067",
-            appId: "1:81648679067:web:1f473773a7a914f24fae3e"
+            appId: "1:81648679067:web:1f473773a7a914f24fae3e",
+            measurementId: "G-JJ6HL1NGMF"
         };
-        // ----------------------------------------------------------------
 
-        // Initialize Firebase
+
+        // Check if configuration is available
+        if (!firebaseConfig || !firebaseConfig.databaseURL) {
+            document.getElementById('system-status').innerHTML = 'Status: <span class="font-semibold text-red-500">Firebase configuration missing.</span>';
+            document.getElementById('metric-cards').innerHTML = '<p class="text-center col-span-3 text-red-500">Cannot load data: Firebase configuration is missing.</p>';
+            throw new Error("Firebase configuration is required.");
+        }
+
+        // 2. INITIALIZE FIREBASE
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getDatabase(app);
-        
-        // Data reference path
-        const sensorRef = ref(db, "watermark_sensor");
+        setLogLevel('Debug'); // Enable debug logging for Firebase
 
-        // DOM elements
-        const resistanceEl = document.getElementById("resistance");
-        const centibarEl = document.getElementById("centibar");
-        const statusEl = document.getElementById("status");
-        const timestampTimeEl = document.getElementById("timestamp-time");
-        const timestampDateEl = document.getElementById("timestamp-date");
-        const statusCardEl = document.getElementById("status-card");
-        const dataCards = document.querySelectorAll(".data-card");
+        let centibarChart; // Chart instance
 
-        // Helper function to update status card styling
-        function updateStatusStyle(status) {
-            // Remove all existing status classes
-            statusCardEl.className = 'data-card p-6 rounded-xl shadow-lg transition duration-300 transform scale-100 ring-2 ring-transparent';
-
-            let bgColor = 'bg-gray-400'; // Default gray
-            let ringColor = 'ring-gray-300';
-
-            // Apply specific Tailwind classes based on status
-            switch (status.toLowerCase()) {
-                case 'wet':
-                    bgColor = 'bg-blue-600';
-                    ringColor = 'ring-blue-300';
-                    break;
-                case 'optimal':
-                    bgColor = 'bg-green-600';
-                    ringColor = 'ring-green-300';
-                    break;
-                case 'moderate stress':
-                    bgColor = 'bg-yellow-600';
-                    ringColor = 'ring-yellow-300';
-                    break;
-                case 'severe stress':
-                case 'dry':
-                    bgColor = 'bg-red-600';
-                    ringColor = 'ring-red-300';
-                    break;
-                default:
-                    // Use default classes
-                    break;
-            }
-            
-            // Re-apply base classes and dynamic color classes
-            statusCardEl.classList.add(bgColor, ringColor, 'ring-opacity-50');
-        }
-
-        // Helper function to format the timestamp
-        function formatTimestamp(timestampString) {
-            try {
-                // Assuming timestampString is in a format like '2023-10-20 10:30:00' or ISO
-                const date = new Date(timestampString);
-                
-                // Check if the date is valid
-                if (isNaN(date)) {
-                    return { time: '--', date: 'Invalid Date Format' };
+        const formatTimeForChart = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            // Example: 2024-05-15 10:30:00 -> 10:30 (15/05)
+            const parts = timestamp.split(' ');
+            if (parts.length === 2) {
+                const time = parts[1].substring(0, 5); // HH:MM
+                const dateParts = parts[0].split('-');
+                if (dateParts.length === 3) {
+                     // MM/DD format
+                    return `${time} (${dateParts[1]}/${dateParts[2]})`;
                 }
+                return time;
+            }
+            return timestamp;
+        };
 
-                const time = date.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
-                });
+        // 3. AUTHENTICATION AND DATA LISTENERS
+        async function initializeAppAndAuth() {
+            try {
+                // We use anonymous sign-in as the simplest way to authenticate
+                // for read access to the Realtime Database.
+                await signInAnonymously(auth);
                 
-                const day = date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
+                document.getElementById('system-status').innerHTML = 'Status: <span class="font-semibold text-green-600">Connected & Authenticated</span>';
+                
+                // Start listening for data once authenticated
+                listenForCurrentData();
+                listenForHistoricalData();
 
-                return { time: time, date: day };
-
-            } catch (e) {
-                console.error("Error parsing timestamp:", e);
-                return { time: '--', date: 'Format Error' };
+            } catch (error) {
+                console.error("Firebase Auth Error: Ensure your Realtime Database Security Rules allow anonymous read access or implement a proper login.", error);
+                document.getElementById('system-status').innerHTML = 'Status: <span class="font-semibold text-red-500">Authentication Failed. Check Database Rules.</span>';
             }
         }
 
+        // 4. LISTEN FOR CURRENT DATA (LATEST VALUES)
+        function listenForCurrentData() {
+            // Note: Data path matches the Arduino sketch: /watermark_sensor
+            const currentDataRef = ref(db, 'watermark_sensor/');
+            
+            onValue(currentDataRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Update Resistance Card
+                    document.getElementById('display-ohms').textContent = data.resistance_Ohms !== undefined ? data.resistance_Ohms.toFixed(0) : '---';
+                    document.getElementById('update-ohms').textContent = `Last updated: ${data.timestamp || 'N/A'}`;
 
-        // Real-time listener for data updates
-        onValue(sensorRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                // 1. Get current values for animation check
-                const currentResistance = resistanceEl.innerText;
-                const currentCentibar = centibarEl.innerText;
+                    // Update Temperature Card
+                    document.getElementById('display-temp').textContent = data.temperature_C !== undefined ? data.temperature_C.toFixed(2) : '---';
+                    document.getElementById('update-temp').textContent = `Last updated: ${data.timestamp || 'N/A'}`;
 
-                // 2. Update text content
-                const resistanceValue = data.resistance_kOhm.toFixed(2);
-                const centibarValue = data.centibar.toFixed(0); // Centibar usually displayed as whole number
-                const statusValue = data.status || 'N/A';
-                
-                resistanceEl.innerText = resistanceValue;
-                centibarEl.innerText = centibarValue;
-                statusEl.innerText = statusValue;
+                    // Update Centibar Card
+                    document.getElementById('display-centibar').textContent = data.centibar !== undefined ? data.centibar.toFixed(2) : '---';
+                    document.getElementById('update-centibar').textContent = `Last updated: ${data.timestamp || 'N/A'}`;
+                    
+                    // Update Status Text and styling
+                    const statusEl = document.getElementById('status-text');
+                    statusEl.textContent = `Status: ${data.status || 'N/A'}`;
+                    
+                    // Simple logic to change color based on soil status (Centibar ranges from Arduino code)
+                    let statusColor = 'text-gray-600';
+                    if (data.centibar >= 0 && data.centibar <= 10) { // Wet
+                        statusColor = 'text-sky-600';
+                    } else if (data.centibar > 10 && data.centibar <= 30) { // Ideal
+                        statusColor = 'text-green-600';
+                    } else if (data.centibar > 30 && data.centibar <= 200) { // Dry
+                        statusColor = 'text-red-600';
+                    }
+                    statusEl.className = `text-sm font-medium my-1 ${statusColor}`;
 
-                // 3. Update Timestamp
-                const { time, date } = formatTimestamp(data.timestamp);
-                timestampTimeEl.innerText = time;
-                timestampDateEl.innerText = date;
+                } else {
+                    console.warn("No current data found at /watermark_sensor/");
+                }
+            }, {
+                // Handle potential errors in reading data
+                onlyOnce: false 
+            });
+        }
 
-                // 4. Update Status Card Color
-                updateStatusStyle(statusValue);
-                
-                // 5. Add Pulse Animation for visual feedback on update
-                dataCards.forEach(card => {
-                    // Remove existing animation class
-                    card.classList.remove('pulse-on-update');
-                    // Force reflow/repaint
-                    void card.offsetWidth; 
-                    // Add animation class back
-                    card.classList.add('pulse-on-update');
-                });
-                
+
+        // 5. LISTEN FOR HISTORICAL DATA (FOR CHART)
+        function listenForHistoricalData() {
+            // Query the last 24 entries (approximately 24 hours if running every minute)
+            const historyRef = query(ref(db, 'watermark_sensor/history'), limitToLast(24));
+
+            onValue(historyRef, (snapshot) => {
+                const historyData = snapshot.val();
+                if (historyData) {
+                    const timestamps = [];
+                    const centibars = [];
+
+                    // Sort entries by timestamp field
+                    const sortedEntries = Object.values(historyData)
+                        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    sortedEntries.forEach(entry => {
+                        timestamps.push(formatTimeForChart(entry.timestamp));
+                        centibars.push(entry.centibar);
+                    });
+
+                    updateChart(timestamps, centibars);
+
+                } else {
+                    console.warn("No historical data found.");
+                    updateChart([], []); // Clear chart if no history
+                }
+            });
+        }
+
+        // 6. CHART INITIALIZATION AND UPDATE
+        function updateChart(labels, data) {
+            const ctx = document.getElementById('centibarChart').getContext('2d');
+
+            if (centibarChart) {
+                // Update existing chart
+                centibarChart.data.labels = labels;
+                centibarChart.data.datasets[0].data = data;
+                centibarChart.update();
             } else {
-                console.log("No data available from the sensor reference.");
+                // Initialize new chart
+                centibarChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Soil Water Potential (Centibar)',
+                            data: data,
+                            borderColor: '#3b82f6', // blue-500
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#1d4ed8' // blue-700
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: '#1f2937' // gray-800
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Centibar (cb)',
+                                    color: '#4b5563'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time',
+                                    color: '#4b5563'
+                                }
+                            }
+                        }
+                    }
+                });
             }
-        }, (error) => {
-            console.error("Firebase Realtime Database error:", error);
-            // Display error state on the dashboard
-            resistanceEl.innerText = 'Error';
-            centibarEl.innerText = 'Error';
-            statusEl.innerText = 'Failed';
-            updateStatusStyle('error');
-        });
+        }
+
+        // Start the application flow
+        initializeAppAndAuth();
     </script>
 </body>
 </html>
